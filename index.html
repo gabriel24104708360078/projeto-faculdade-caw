@@ -1,1 +1,695 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VozClínica - Sistema de Triagem Hospitalar & ACCR</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            manchester: {
+              red: '#EF4444',
+              orange: '#F97316',
+              yellow: '#EAB308',
+              green: '#22C55E',
+              blue: '#3B82F6'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.88; transform: scale(1.01); }
+    }
+    .animate-pulse-glow {
+      animation: pulseGlow 2.5s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen font-sans flex flex-col">
 
+  <!-- Header / Navigation Bar -->
+  <header class="bg-sky-800 text-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-white text-sky-800 p-2 rounded-lg font-black text-xl flex items-center justify-center w-10 h-10 shadow">
+          <i class="fa-solid fa-hospital-user"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight">VozClínica <span class="text-sky-300 font-normal">| ACCR</span></h1>
+          <p class="text-xs text-sky-200">Acolhimento com Classificação de Risco Hospitalar</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex bg-sky-900/60 p-1 rounded-xl gap-1">
+        <button id="tab-totem" onclick="switchTab('totem')" class="px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 bg-white text-sky-900 shadow">
+          <i class="fa-solid fa-microphone-lines"></i>
+          1. Totem Acolhimento
+        </button>
+        <button id="tab-nurse" onclick="switchTab('nurse')" class="px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 text-sky-100 hover:bg-sky-800">
+          <i class="fa-solid fa-user-nurse"></i>
+          2. Painel Enfermeiro
+        </button>
+        <button id="tab-tv" onclick="switchTab('tv')" class="px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 text-sky-100 hover:bg-sky-800">
+          <i class="fa-solid fa-tv"></i>
+          3. TV Sala de Espera
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
+
+    <!-- Screen 1: Totem de Acolhimento -->
+    <section id="screen-totem" class="space-y-6">
+      <div class="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-sky-700 to-sky-900 p-6 text-white">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="bg-sky-500/30 text-sky-100 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider">Totem Interativo</span>
+              <h2 class="text-2xl font-bold mt-1">Acolhimento ao Paciente - VozClínica</h2>
+              <p class="text-sky-200 text-sm mt-1">Digite ou use o microfone para relatar o motivo da sua consulta.</p>
+            </div>
+            <div class="text-right hidden sm:block">
+              <i class="fa-solid fa-notes-medical text-5xl text-sky-300 opacity-60"></i>
+            </div>
+          </div>
+        </div>
+
+        <form id="totem-form" onsubmit="handleTotemSubmit(event)" class="p-6 md:p-8 space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Patient Name -->
+            <div>
+              <label for="patient-name" class="block text-sm font-medium text-slate-700 mb-1">
+                Nome Completo do Paciente <span class="text-red-500">*</span>
+              </label>
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <i class="fa-solid fa-user"></i>
+                </div>
+                <input type="text" id="patient-name" required placeholder="Ex: Maria Silva Sauro"
+                  class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition text-slate-800">
+              </div>
+            </div>
+
+            <!-- Patient Document / CPF -->
+            <div>
+              <label for="patient-cpf" class="block text-sm font-medium text-slate-700 mb-1">
+                CPF ou Documento de Identidade
+              </label>
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <i class="fa-solid fa-id-card"></i>
+                </div>
+                <input type="text" id="patient-cpf" placeholder="000.000.000-00"
+                  class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition text-slate-800">
+              </div>
+            </div>
+          </div>
+
+          <!-- Complaint Description with Speech Recognition -->
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label for="patient-complaint" class="block text-sm font-medium text-slate-700">
+                Relato da Queixa / Sintomas <span class="text-red-500">*</span>
+              </label>
+              <span id="speech-status" class="text-xs text-slate-500 italic">Clique no microfone para falar</span>
+            </div>
+
+            <div class="relative">
+              <textarea id="patient-complaint" rows="4" required placeholder="Descreva os sintomas sentidos (ex: Dor forte no peito há 2 horas, acompanhada de falta de ar)..."
+                class="w-full p-4 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition text-slate-800 pr-14 resize-none"></textarea>
+
+              <button type="button" id="mic-btn" onclick="toggleVoiceRecognition()" title="Relatar sintoma por voz"
+                class="absolute right-3 top-3 bg-sky-600 hover:bg-sky-700 text-white w-10 h-10 rounded-xl flex items-center justify-center transition shadow-md group">
+                <i id="mic-icon" class="fa-solid fa-microphone"></i>
+              </button>
+            </div>
+            <p class="text-xs text-slate-500 mt-2 flex items-center gap-1">
+              <i class="fa-solid fa-circle-info text-sky-600"></i>
+              Você pode digitar diretamente ou pressionar o microfone para utilizar o assistente por voz VozClínica.
+            </p>
+          </div>
+
+          <!-- Quick Complaint Templates / Buttons -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Exemplos rápidos de sintoma:</label>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" onclick="appendComplaint('Forte dor no peito e suor frio.')" class="px-3 py-1.5 bg-slate-100 hover:bg-sky-100 text-slate-700 text-xs rounded-lg border border-slate-200 transition">💔 Dor no Peito</button>
+              <button type="button" onclick="appendComplaint('Febre alta (39.5°C) e dores no corpo há 2 dias.')" class="px-3 py-1.5 bg-slate-100 hover:bg-sky-100 text-slate-700 text-xs rounded-lg border border-slate-200 transition">🌡️ Febre Alta</button>
+              <button type="button" onclick="appendComplaint('Falta de ar e chiado no peito.')" class="px-3 py-1.5 bg-slate-100 hover:bg-sky-100 text-slate-700 text-xs rounded-lg border border-slate-200 transition">🫁 Falta de Ar</button>
+              <button type="button" onclick="appendComplaint('Entorse no tornozelo com inchaço e dor moderada.')" class="px-3 py-1.5 bg-slate-100 hover:bg-sky-100 text-slate-700 text-xs rounded-lg border border-slate-200 transition">🦵 Torção / Dor Articular</button>
+              <button type="button" onclick="appendComplaint('Renovação de receita e acompanhamento de rotina.')" class="px-3 py-1.5 bg-slate-100 hover:bg-sky-100 text-slate-700 text-xs rounded-lg border border-slate-200 transition">💊 Renovar Receita</button>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="pt-4 border-t border-slate-200 flex justify-end">
+            <button type="submit" class="w-full sm:w-auto px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg hover:shadow-emerald-600/30 transition flex items-center justify-center gap-2 text-lg">
+              <i class="fa-solid fa-ticket"></i>
+              Gerar Senha de Atendimento
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Ticket Issued Confirmation Modal / Card -->
+      <div id="ticket-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 text-center shadow-2xl space-y-5 animate-bounce-short border border-sky-100">
+          <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl shadow-inner">
+            <i class="fa-solid fa-check"></i>
+          </div>
+          <div>
+            <h3 class="text-2xl font-black text-slate-800">Senha Gerada com Sucesso!</h3>
+            <p class="text-slate-500 text-sm">Acolhimento registrado. Por favor, aguarde a chamada no painel para a triagem de enfermagem.</p>
+          </div>
+
+          <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-2">
+            <span class="text-xs font-semibold uppercase tracking-widest text-slate-400">Sua Senha</span>
+            <div id="modal-ticket-id" class="text-5xl font-black text-sky-800 tracking-wider">TR-001</div>
+            <div id="modal-patient-name" class="text-lg font-bold text-slate-700 pt-2">Maria Silva</div>
+            <div id="modal-time" class="text-xs text-slate-500">Horário de Chegada: 14:30</div>
+          </div>
+
+          <button onclick="closeTicketModal()" class="w-full py-3 bg-sky-800 hover:bg-sky-900 text-white font-bold rounded-xl transition shadow">
+            Entendido / Concluir
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screen 2: Painel do Enfermeiro -->
+    <section id="screen-nurse" class="hidden space-y-6">
+      <!-- Title & Protocol Legend Bar -->
+      <div class="bg-white rounded-2xl p-6 shadow-md border border-slate-200 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full uppercase">Módulo de Enfermagem</span>
+            <span id="nurse-queue-count" class="bg-sky-100 text-sky-800 text-xs font-bold px-3 py-1 rounded-full">2 em espera</span>
+          </div>
+          <h2 class="text-2xl font-bold text-slate-800 mt-1">Painel do Enfermeiro (ACCR)</h2>
+          <p class="text-slate-500 text-sm">Classificação de risco segundo o Protocolo de Manchester e direcionamento aos consultórios.</p>
+        </div>
+
+        <!-- Protocol Color Legend -->
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-wrap items-center gap-2 text-xs">
+          <span class="font-bold text-slate-700 mr-1">Manchester:</span>
+          <span class="px-2.5 py-1 bg-red-500 text-white font-bold rounded-md shadow-sm">Emergência</span>
+          <span class="px-2.5 py-1 bg-orange-500 text-white font-bold rounded-md shadow-sm">Muito Urgente</span>
+          <span class="px-2.5 py-1 bg-yellow-400 text-slate-900 font-bold rounded-md shadow-sm">Urgente</span>
+          <span class="px-2.5 py-1 bg-emerald-500 text-white font-bold rounded-md shadow-sm">Pouco Urgente</span>
+          <span class="px-2.5 py-1 bg-blue-500 text-white font-bold rounded-md shadow-sm">Não Urgente</span>
+        </div>
+      </div>
+
+      <!-- Patients Queue Table/List -->
+      <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
+        <div class="p-4 bg-slate-800 text-white font-bold text-sm flex justify-between items-center">
+          <span><i class="fa-solid fa-list-check mr-2"></i> Fila de Pacientes Acolhidos</span>
+          <span class="text-xs font-normal text-slate-300">Ordene ou classifique para priorizar a chamada</span>
+        </div>
+
+        <div id="nurse-patients-list" class="divide-y divide-slate-200">
+          <!-- Rendered dynamically by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Screen 3: Painel da TV da Sala de Espera -->
+    <section id="screen-tv" class="hidden space-y-6">
+      <div class="bg-slate-900 text-white rounded-3xl shadow-2xl p-6 md:p-8 border border-slate-800 min-h-[580px] flex flex-col justify-between">
+
+        <!-- TV Top Bar -->
+        <div class="flex flex-col sm:flex-row justify-between items-center pb-6 border-b border-slate-800 gap-4">
+          <div class="flex items-center gap-3">
+            <div class="bg-sky-500 text-slate-900 p-2.5 rounded-xl font-black text-xl">
+              <i class="fa-solid fa-tv"></i>
+            </div>
+            <div>
+              <h2 class="text-2xl font-black tracking-wide text-white">PAINEL DE CHAMADA</h2>
+              <p class="text-xs text-sky-400 font-medium">SALA DE ESPERA & ATTENDANCE PANEL</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-4 bg-slate-800/80 px-4 py-2 rounded-2xl border border-slate-700">
+            <button onclick="triggerAudioAnnouncement()" title="Repetir anúncio por voz" class="text-sky-400 hover:text-sky-300 text-sm font-bold flex items-center gap-2 bg-slate-700/60 px-3 py-1.5 rounded-xl transition">
+              <i class="fa-solid fa-volume-high"></i>
+              Repetir Voz
+            </button>
+            <div class="text-right border-l border-slate-700 pl-4">
+              <div id="tv-clock" class="text-xl font-black text-slate-100">14:30</div>
+              <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Horário Atual</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Featured Last Called Box -->
+        <div id="tv-featured-call" class="my-6">
+          <!-- Dynamically populated by JS -->
+        </div>
+
+        <!-- Recent Calls History -->
+        <div class="pt-6 border-t border-slate-800">
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-history text-sky-400"></i> Últimas Senhas Chamadas
+          </h3>
+          <div id="tv-call-history" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <!-- Dynamically populated by JS -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="bg-slate-800 text-slate-400 text-center py-3 text-xs border-t border-slate-700">
+    <p>VozClínica / ACCR Prototype - Sistema Inteligente de Triagem e Chamada de Pacientes</p>
+  </footer>
+
+  <!-- System Script Structure -->
+  <script>
+    // System State
+    let ticketCounter = 2;
+    let patients = [
+      {
+        id: 'TR-001',
+        name: 'Carlos Eduardo Oliveira',
+        cpf: '123.456.789-00',
+        complaint: 'Forte dor retroesternal em aperto irradiando para o braço esquerdo há 30 min com sudorese.',
+        timestamp: '10:15',
+        status: 'Aguardando Triagem',
+        risk: null, // red, orange, yellow, green, blue
+        calledRoom: 'Consultório 01',
+        calledAt: null
+      },
+      {
+        id: 'TR-002',
+        name: 'Juliana Mendes Rocha',
+        cpf: '987.654.321-11',
+        complaint: 'Febre alta de 39.2°C há 1 dia, cefaleia e dores musculares intensas.',
+        timestamp: '10:22',
+        status: 'Aguardando Triagem',
+        risk: null,
+        calledRoom: 'Consultório 02',
+        calledAt: null
+      }
+    ];
+
+    let lastCalled = null;
+    let callHistory = [];
+    let recognition = null;
+    let isListening = false;
+
+    // Protocol Config Dictionary
+    const MANCHESTER_PROTOCOLS = {
+      red: { name: 'Emergência', code: 'red', bg: 'bg-red-600', text: 'text-white', badgeBg: 'bg-red-100', badgeText: 'text-red-700', border: 'border-red-500', time: '0 min' },
+      orange: { name: 'Muito Urgente', code: 'orange', bg: 'bg-orange-500', text: 'text-white', badgeBg: 'bg-orange-100', badgeText: 'text-orange-700', border: 'border-orange-500', time: '10 min' },
+      yellow: { name: 'Urgente', code: 'yellow', bg: 'bg-yellow-400', text: 'text-slate-900', badgeBg: 'bg-yellow-100', badgeText: 'text-yellow-800', border: 'border-yellow-400', time: '60 min' },
+      green: { name: 'Pouco Urgente', code: 'green', bg: 'bg-emerald-500', text: 'text-white', badgeBg: 'bg-emerald-100', badgeText: 'text-emerald-700', border: 'border-emerald-500', time: '120 min' },
+      blue: { name: 'Não Urgente', code: 'blue', bg: 'bg-blue-500', text: 'text-white', badgeBg: 'bg-blue-100', badgeText: 'text-blue-700', border: 'border-blue-500', time: '240 min' }
+    };
+
+    // Live Clock Update
+    function updateClock() {
+      const clockEl = document.getElementById('tv-clock');
+      if (clockEl) {
+        const now = new Date();
+        clockEl.innerText = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+      }
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Tab Navigation Logic
+    function switchTab(tabName) {
+      ['totem', 'nurse', 'tv'].forEach(tab => {
+        const screen = document.getElementById(`screen-${tab}`);
+        const btn = document.getElementById(`tab-${tab}`);
+        if (tab === tabName) {
+          screen.classList.remove('hidden');
+          btn.className = "px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 bg-white text-sky-900 shadow";
+        } else {
+          screen.classList.add('hidden');
+          btn.className = "px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 text-sky-100 hover:bg-sky-800";
+        }
+      });
+      if (tabName === 'nurse') renderNursePanel();
+      if (tabName === 'tv') renderTVPanel();
+    }
+
+    // Speech Recognition Helper (VozClínica)
+    function toggleVoiceRecognition() {
+      const speechStatus = document.getElementById('speech-status');
+      const micBtn = document.getElementById('mic-btn');
+      const complaintTextarea = document.getElementById('patient-complaint');
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (!SpeechRecognition) {
+        alert('O navegador atual não suporta a Web Speech API. O relato por texto continua funcionando normalmente.');
+        return;
+      }
+
+      if (isListening) {
+        recognition.stop();
+        return;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.lang = 'pt-BR';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = function() {
+        isListening = true;
+        speechStatus.innerText = "Escutando... Fale o motivo da consulta.";
+        speechStatus.className = "text-xs text-red-600 font-bold animate-pulse";
+        micBtn.className = "absolute right-3 top-3 bg-red-600 hover:bg-red-700 text-white w-10 h-10 rounded-xl flex items-center justify-center transition shadow-md";
+      };
+
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        if (complaintTextarea.value.trim() !== "") {
+          complaintTextarea.value += " " + transcript;
+        } else {
+          complaintTextarea.value = transcript;
+        }
+      };
+
+      recognition.onerror = function(event) {
+        console.error("Speech error", event);
+        speechStatus.innerText = "Erro ao escutar áudio. Tente falar novamente.";
+        speechStatus.className = "text-xs text-amber-600 font-medium";
+      };
+
+      recognition.onend = function() {
+        isListening = false;
+        speechStatus.innerText = "Reconhecimento finalizado.";
+        speechStatus.className = "text-xs text-emerald-600 font-medium";
+        micBtn.className = "absolute right-3 top-3 bg-sky-600 hover:bg-sky-700 text-white w-10 h-10 rounded-xl flex items-center justify-center transition shadow-md";
+      };
+
+      recognition.start();
+    }
+
+    function appendComplaint(text) {
+      const textarea = document.getElementById('patient-complaint');
+      if (textarea.value.trim().length > 0) {
+        textarea.value += ' ' + text;
+      } else {
+        textarea.value = text;
+      }
+    }
+
+    // Totem Form Submission
+    function handleTotemSubmit(e) {
+      e.preventDefault();
+      const nameInput = document.getElementById('patient-name');
+      const cpfInput = document.getElementById('patient-cpf');
+      const complaintInput = document.getElementById('patient-complaint');
+
+      ticketCounter++;
+      const ticketId = `TR-${String(ticketCounter).padStart(3, '0')}`;
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      const newPatient = {
+        id: ticketId,
+        name: nameInput.value.trim(),
+        cpf: cpfInput.value.trim() || 'Não informado',
+        complaint: complaintInput.value.trim(),
+        timestamp: timeStr,
+        status: 'Aguardando Triagem',
+        risk: null,
+        calledRoom: 'Consultório 01',
+        calledAt: null
+      };
+
+      patients.push(newPatient);
+
+      document.getElementById('modal-ticket-id').innerText = ticketId;
+      document.getElementById('modal-patient-name').innerText = newPatient.name;
+      document.getElementById('modal-time').innerText = `Horário de Chegada: ${timeStr}`;
+      document.getElementById('ticket-modal').classList.remove('hidden');
+
+      nameInput.value = '';
+      cpfInput.value = '';
+      complaintInput.value = '';
+    }
+
+    function closeTicketModal() {
+      document.getElementById('ticket-modal').classList.add('hidden');
+    }
+
+    // Nurse Panel Logic
+    function classifyRisk(patientId, riskKey) {
+      const p = patients.find(patient => patient.id === patientId);
+      if (p) {
+        p.risk = riskKey;
+        p.status = 'Triado';
+        renderNursePanel();
+      }
+    }
+
+    function callPatient(patientId) {
+      const p = patients.find(patient => patient.id === patientId);
+      if (!p) return;
+
+      const roomSelect = document.getElementById(`room-select-${patientId}`);
+      if (roomSelect) {
+        p.calledRoom = roomSelect.value;
+      }
+
+      const now = new Date();
+      p.calledAt = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      p.status = 'Chamado';
+
+      lastCalled = p;
+      callHistory = [p, ...callHistory.filter(item => item.id !== p.id)];
+
+      renderNursePanel();
+      announceOnTV(p);
+    }
+
+    function triggerAudioAnnouncement() {
+      if (lastCalled) {
+        announceOnTV(lastCalled);
+      }
+    }
+
+    function announceOnTV(patient) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); // Stop current speech if playing
+        const text = `Senha ${patient.id.replace('-', ' ')}. Paciente ${patient.name}. Comparecer ao ${patient.calledRoom}.`;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'pt-BR';
+        utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    function renderNursePanel() {
+      const listContainer = document.getElementById('nurse-patients-list');
+      const queueCountEl = document.getElementById('nurse-queue-count');
+
+      if (!listContainer) return;
+
+      const waitingCount = patients.filter(p => p.status !== 'Chamado').length;
+      queueCountEl.innerText = `${waitingCount} em espera`;
+
+      if (patients.length === 0) {
+        listContainer.innerHTML = `
+          <div class="p-8 text-center text-slate-400">
+            <i class="fa-solid fa-folder-open text-4xl mb-2"></i>
+            <p>Nenhum paciente aguardando no momento.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const riskOrder = { red: 1, orange: 2, yellow: 3, green: 4, blue: 5, null: 6 };
+      const sortedPatients = [...patients].sort((a, b) => {
+        const orderA = riskOrder[a.risk] || 6;
+        const orderB = riskOrder[b.risk] || 6;
+        return orderA - orderB;
+      });
+
+      listContainer.innerHTML = sortedPatients.map(p => {
+        const proto = p.risk ? MANCHESTER_PROTOCOLS[p.risk] : null;
+
+        return `
+          <div class="p-5 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 transition hover:bg-slate-50/80">
+            <!-- Patient Info -->
+            <div class="space-y-1 max-w-xl">
+              <div class="flex items-center gap-3 flex-wrap">
+                <span class="text-lg font-black text-slate-800 tracking-wider bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">
+                  ${p.id}
+                </span>
+                <span class="font-bold text-slate-800 text-base">${p.name}</span>
+                <span class="text-xs text-slate-500">(CPF: ${p.cpf})</span>
+                <span class="text-xs text-slate-400"><i class="fa-regular fa-clock mr-1"></i>${p.timestamp}</span>
+
+                ${proto ? `
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase ${proto.badgeBg} ${proto.badgeText} border ${proto.border}">
+                    ${proto.name} (Até ${proto.time})
+                  </span>
+                ` : `
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                    Aguardando Classificação
+                  </span>
+                `}
+                ${p.status === 'Chamado' ? `<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-xs font-bold">Chamado às ${p.calledAt}</span>` : ''}
+              </div>
+
+              <!-- Queixa / Sintoma -->
+              <p class="text-sm text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 mt-2">
+                <strong class="text-slate-700">Relato / Sintomas:</strong> ${p.complaint}
+              </p>
+            </div>
+
+            <!-- Risk Buttons & Room Selection -->
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full lg:w-auto">
+              <!-- Manchester Color Buttons -->
+              <div class="flex flex-wrap gap-1">
+                <button onclick="classifyRisk('${p.id}', 'red')" title="Emergência (Vermelho)"
+                  class="px-3 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition ${p.risk === 'red' ? 'ring-2 ring-offset-2 ring-red-600' : 'opacity-80 hover:opacity-100'}">
+                  Vermelho
+                </button>
+                <button onclick="classifyRisk('${p.id}', 'orange')" title="Muito Urgente (Laranja)"
+                  class="px-3 py-2 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition ${p.risk === 'orange' ? 'ring-2 ring-offset-2 ring-orange-500' : 'opacity-80 hover:opacity-100'}">
+                  Laranja
+                </button>
+                <button onclick="classifyRisk('${p.id}', 'yellow')" title="Urgente (Amarelo)"
+                  class="px-3 py-2 text-xs font-bold text-slate-900 bg-yellow-400 hover:bg-yellow-500 rounded-lg transition ${p.risk === 'yellow' ? 'ring-2 ring-offset-2 ring-yellow-400' : 'opacity-80 hover:opacity-100'}">
+                  Amarelo
+                </button>
+                <button onclick="classifyRisk('${p.id}', 'green')" title="Pouco Urgente (Verde)"
+                  class="px-3 py-2 text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg transition ${p.risk === 'green' ? 'ring-2 ring-offset-2 ring-emerald-500' : 'opacity-80 hover:opacity-100'}">
+                  Verde
+                </button>
+                <button onclick="classifyRisk('${p.id}', 'blue')" title="Não Urgente (Azul)"
+                  class="px-3 py-2 text-xs font-bold text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition ${p.risk === 'blue' ? 'ring-2 ring-offset-2 ring-blue-500' : 'opacity-80 hover:opacity-100'}">
+                  Azul
+                </button>
+              </div>
+
+              <!-- Consultório Selection & Call Button -->
+              <div class="flex items-center gap-2 mt-2 sm:mt-0">
+                <select id="room-select-${p.id}" class="text-xs p-2 bg-slate-100 border border-slate-300 rounded-lg font-medium text-slate-700 focus:ring-sky-500 focus:border-sky-500">
+                  <option value="Consultório 01" ${p.calledRoom === 'Consultório 01' ? 'selected' : ''}>Consultório 01</option>
+                  <option value="Consultório 02" ${p.calledRoom === 'Consultório 02' ? 'selected' : ''}>Consultório 02</option>
+                  <option value="Consultório 03" ${p.calledRoom === 'Consultório 03' ? 'selected' : ''}>Consultório 03</option>
+                  <option value="Sala de Triagem 01" ${p.calledRoom === 'Sala de Triagem 01' ? 'selected' : ''}>Sala de Triagem 01</option>
+                </select>
+
+                <button onclick="callPatient('${p.id}')"
+                  class="px-4 py-2 bg-sky-800 hover:bg-sky-900 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-1">
+                  <i class="fa-solid fa-bullhorn"></i>
+                  Chamar
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // TV Panel Logic
+    function renderTVPanel() {
+      const featuredContainer = document.getElementById('tv-featured-call');
+      const historyContainer = document.getElementById('tv-call-history');
+
+      if (!featuredContainer || !historyContainer) return;
+
+      if (!lastCalled) {
+        featuredContainer.innerHTML = `
+          <div class="bg-slate-800/60 rounded-3xl p-12 text-center border border-slate-700/60">
+            <i class="fa-solid fa-clock text-6xl text-sky-400/40 mb-4 animate-pulse"></i>
+            <h3 class="text-3xl font-bold text-slate-300">Aguardando Primeira Chamada</h3>
+            <p class="text-slate-400 text-sm mt-2">Os pacientes chamados pelo Painel do Enfermeiro aparecerão em destaque aqui.</p>
+          </div>
+        `;
+        historyContainer.innerHTML = `<div class="col-span-full text-center text-slate-500 py-4 text-sm">Nenhuma chamada anterior registrada.</div>`;
+        return;
+      }
+
+      const proto = lastCalled.risk ? MANCHESTER_PROTOCOLS[lastCalled.risk] : null;
+      const riskBadgeStyle = proto ? `${proto.bg} ${proto.text}` : 'bg-slate-700 text-slate-200';
+
+      featuredContainer.innerHTML = `
+        <div class="bg-gradient-to-br from-sky-950 via-slate-900 to-slate-900 border-2 border-sky-500/50 rounded-3xl p-8 md:p-10 shadow-2xl relative overflow-hidden animate-pulse-glow">
+          <div class="absolute -right-10 -bottom-10 opacity-10 text-sky-300 pointer-events-none">
+            <i class="fa-solid fa-bullhorn text-[240px]"></i>
+          </div>
+
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+            <div class="space-y-3">
+              <div class="flex items-center gap-3">
+                <span class="bg-sky-500 text-slate-950 font-black px-4 py-1 rounded-full text-xs uppercase tracking-widest">
+                  ÚLTIMA CHAMADA
+                </span>
+                ${proto ? `<span class="px-3 py-1 rounded-full text-xs font-bold uppercase ${riskBadgeStyle}">${proto.name}</span>` : ''}
+              </div>
+              <div class="text-6xl md:text-8xl font-black text-amber-400 tracking-wider">
+                ${lastCalled.id}
+              </div>
+              <div class="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
+                ${lastCalled.name}
+              </div>
+            </div>
+
+            <div class="bg-sky-900/40 border border-sky-500/40 p-6 rounded-2xl text-center min-w-[260px] space-y-2">
+              <span class="text-xs text-sky-300 font-bold uppercase tracking-widest block">LOCAL DE ATENDIMENTO</span>
+              <div class="text-3xl md:text-4xl font-black text-emerald-400">
+                ${lastCalled.calledRoom || 'Consultório 01'}
+              </div>
+              <span class="text-xs text-slate-400 font-medium block">Horário: ${lastCalled.calledAt || 'Agora'}</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Call History Cards
+      const historyItems = callHistory.slice(1, 5); // next 4 items
+      if (historyItems.length === 0) {
+        historyContainer.innerHTML = `<div class="col-span-full text-slate-500 text-center py-2 text-sm">Sem outras chamadas recentes.</div>`;
+      } else {
+        historyContainer.innerHTML = historyItems.map(item => {
+          const itemProto = item.risk ? MANCHESTER_PROTOCOLS[item.risk] : null;
+          return `
+            <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/80 space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-xl font-black text-amber-400">${item.id}</span>
+                <span class="text-xs text-slate-400">${item.calledAt || ''}</span>
+              </div>
+              <div class="font-bold text-slate-200 text-sm truncate">${item.name}</div>
+              <div class="text-xs text-sky-400 font-semibold flex justify-between items-center">
+                <span>${item.calledRoom || 'Consultório'}</span>
+                ${itemProto ? `<span class="w-3 h-3 rounded-full ${itemProto.bg}" title="${itemProto.name}"></span>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // Default initialization on page load
+    window.onload = function() {
+      renderNursePanel();
+      renderTVPanel();
+    };
+  </script>
+</body>
+</html>
